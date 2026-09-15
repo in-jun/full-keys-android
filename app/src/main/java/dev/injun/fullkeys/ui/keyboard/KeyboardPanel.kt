@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -51,6 +50,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -134,14 +134,18 @@ fun KeyboardPanel(
     val floating = settings.floating && !preview
     val insets = if (preview) PaddingValues() else keyboardInsets()
 
-    // The floating board is placed inside the whole screen; a docked one fills the width it
+    // The floating board is placed inside the whole window; a docked one fills the width it
     // is given, and the caller's modifier belongs to the board either way.
+    val windowHeight = LocalWindowInfo.current.containerSize.height
     BoxWithConstraints(
         if (floating) {
-            // A floating board moves inside what the screen actually leaves free, so it can
-            // never be put under the system's own buttons where its keys would not press.
+            // As tall as the window by measure, not by filling: an input method's view is
+            // given no height to fill, so a board asked to fill it was given exactly its own
+            // height and had nowhere to go. Inside that, the board moves in what the screen
+            // actually leaves free, never under the system's own buttons.
             Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .height(with(density) { windowHeight.toDp() })
                 .padding(insets)
                 .padding(FLOAT_MARGIN)
         } else {
@@ -214,8 +218,31 @@ fun KeyboardPanel(
         }
 
         val currentRowHeightDp by rememberUpdatedState(shownRowHeightDp)
-        // Dragging an edge drags that edge: the top one grows the keyboard as it goes up,
-        // the bottom corner as it goes down.
+        val resizeNow by rememberUpdatedState(resize)
+        val floatingNow by rememberUpdatedState(floating)
+        val geometryNow by rememberUpdatedState(geometry)
+        val boardSizeNow by rememberUpdatedState(boardSize)
+        val placeNow by rememberUpdatedState(Offset(settings.floatX, settings.floatY))
+        val moveNow by rememberUpdatedState(onMove)
+
+        // Both drags are measured on the screen, since what is dragged moves under the finger.
+        // The height a drag of an edge arrives at: [edge] is 1 for the top edge, which grows
+        // the keyboard as it goes up, and -1 for the bottom corner, which grows it going down.
+        fun heightAfter(startRow: Float, startRawY: Float, rawY: Float, edge: Float): Float =
+            (startRow + (startRawY - rawY) * edge / density.density / rows).coerceIn(shownRange)
+
+        // Where a floating board stands after a drag, as a share of the room it has to move in.
+        fun placeAfter(startAt: Offset, startRaw: Offset, raw: Offset): Offset {
+            val free = IntSize(
+                (screen.width - boardSizeNow.width).coerceAtLeast(1),
+                (screen.height - boardSizeNow.height).coerceAtLeast(1),
+            )
+            return Offset(
+                (startAt.x + (raw.x - startRaw.x) / free.width).coerceIn(0f, 1f),
+                (startAt.y + (raw.y - startRaw.y) / free.height).coerceIn(0f, 1f),
+            )
+        }
+
         fun resizeFrom(edge: Float): Modifier = if (resize == null) {
             Modifier
         } else {
@@ -227,8 +254,7 @@ fun KeyboardPanel(
                     do {
                         val event = awaitPointerEvent()
                         event.motionEvent?.let { motion ->
-                            val moved = (startY - motion.rawY) * edge / density.density / rows
-                            val rowHeight = (start + moved).coerceIn(shownRange)
+                            val rowHeight = heightAfter(start, startY, motion.rawY, edge)
                             if (rowHeight != currentRowHeightDp) resize.onRowHeight(rowHeight)
                         }
                         event.changes.forEach { it.consume() }
@@ -239,41 +265,87 @@ fun KeyboardPanel(
         val resizeDrag = resizeFrom(1f)
         val resizeFromCorner = resizeFrom(-1f)
 
+        // Dragging the bar of a floating keyboard carries the board with it.
         val moveDrag = if (resize == null || !floating) {
             Modifier
         } else {
-            Modifier.pointerInput(onMove, screen, boardSize) {
-                // Dragging a floating keyboard carries the board with it, measured on the
-                // screen since the board moves under the finger as it goes.
+            Modifier.pointerInput(Unit) {
                 awaitEachGesture {
                     awaitFirstDown()
-                    var last = currentEvent.motionEvent?.let { Offset(it.rawX, it.rawY) } ?: return@awaitEachGesture
-                    var at = Offset(settings.floatX, settings.floatY)
+                    val startRaw = currentEvent.motionEvent?.let { Offset(it.rawX, it.rawY) } ?: return@awaitEachGesture
+                    val startAt = placeNow
                     do {
                         val event = awaitPointerEvent()
                         event.motionEvent?.let { motion ->
-                            val free = IntSize(
-                                (screen.width - boardSize.width).coerceAtLeast(1),
-                                (screen.height - boardSize.height).coerceAtLeast(1),
-                            )
-                            at = Offset(
-                                (at.x + (motion.rawX - last.x) / free.width).coerceIn(0f, 1f),
-                                (at.y + (motion.rawY - last.y) / free.height).coerceIn(0f, 1f),
-                            )
-                            last = Offset(motion.rawX, motion.rawY)
-                            onMove(at.x, at.y)
+                            val at = placeAfter(startAt, startRaw, Offset(motion.rawX, motion.rawY))
+                            moveNow(at.x, at.y)
                         }
                         event.changes.forEach { it.consume() }
                     } while (event.changes.any { it.pressed })
                 }
             }
         }
+
+        // One handler for the keys, kept through resizing so that the finger that held Fn
+        // to begin it goes on as the drag without lifting: it moves a floating board and
+        // drags the top edge of a docked one. Keyed on the shape alone; a geometry that
+        // changes under a drag, as it does when the drag is what resizes it, must not
+        // restart the handler mid-gesture.
+        val keysInput = Modifier.pointerInput(shape, held) {
+            awaitPointerEventScope {
+                var dragFrom: Offset? = null
+                var rowAtStart = 0f
+                var placeAtStart = Offset.Zero
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val resizing = resizeNow
+                    if (resizing != null) {
+                        val motion = event.motionEvent
+                        if (motion != null && event.changes.any { it.pressed }) {
+                            val raw = Offset(motion.rawX, motion.rawY)
+                            val from = dragFrom ?: raw.also {
+                                dragFrom = it
+                                rowAtStart = currentRowHeightDp
+                                placeAtStart = placeNow
+                            }
+                            if (floatingNow) {
+                                val at = placeAfter(placeAtStart, from, raw)
+                                moveNow(at.x, at.y)
+                            } else {
+                                val rowHeight = heightAfter(rowAtStart, from.y, raw.y, 1f)
+                                if (rowHeight != currentRowHeightDp) resizing.onRowHeight(rowHeight)
+                            }
+                        } else {
+                            dragFrom = null
+                        }
+                        event.changes.forEach { it.consume() }
+                        continue
+                    }
+                    dragFrom = null
+                    for (change in event.changes) {
+                        val id = change.id.value
+                        if (change.changedToDownIgnoreConsumed()) {
+                            geometryNow.keyAt(change.position.x, change.position.y)?.let { key ->
+                                touched[id] = key
+                                held.getValue(key).value = true
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                press(id, key)
+                            }
+                            change.consume()
+                        } else if (change.changedToUpIgnoreConsumed()) {
+                            touched.remove(id)?.let { key ->
+                                held.getValue(key).value = touched.containsValue(key)
+                                release(id)
+                            }
+                            change.consume()
+                        }
+                    }
+                }
+            }
+        }
         val keysArea = Modifier
             .fillMaxWidth()
             .height(with(density) { geometry.height.toDp() })
-            // A floating keyboard being resized is dragged about by anywhere on it, its
-            // keys included: they press nothing while it is being resized anyway.
-            .then(if (floating) moveDrag else Modifier)
 
         Column {
             // The bar grows out of the top of the keyboard rather than appearing on it,
@@ -296,33 +368,9 @@ fun KeyboardPanel(
             }
             Box(
                 when {
-                    resize != null -> keysArea.alpha(RESTING_KEYS_ALPHA)
                     preview -> keysArea
-                    else -> keysArea.pointerInput(geometry, held) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                for (change in event.changes) {
-                                    val id = change.id.value
-                                    if (change.changedToDownIgnoreConsumed()) {
-                                        geometry.keyAt(change.position.x, change.position.y)?.let { key ->
-                                            touched[id] = key
-                                            held.getValue(key).value = true
-                                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                            press(id, key)
-                                        }
-                                        change.consume()
-                                    } else if (change.changedToUpIgnoreConsumed()) {
-                                        touched.remove(id)?.let { key ->
-                                            held.getValue(key).value = touched.containsValue(key)
-                                            release(id)
-                                        }
-                                        change.consume()
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    resize != null -> keysArea.then(keysInput).alpha(RESTING_KEYS_ALPHA)
+                    else -> keysArea.then(keysInput)
                 },
             ) {
                 for (frame in geometry.frames) {
