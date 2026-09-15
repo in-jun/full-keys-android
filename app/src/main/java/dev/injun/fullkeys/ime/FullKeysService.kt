@@ -9,7 +9,6 @@ import android.os.SystemClock
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -206,12 +205,14 @@ class FullKeysService : InputMethodService(), LifecycleOwner, SavedStateRegistry
 
     // Focus can move to another field, or another app, while a finger is still on a key.
     // Its release would then arrive somewhere that never saw the press, and the field
-    // that did would keep the key held.
-    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
-        releaseEverything()
-        super.onStartInput(attribute, restarting)
-    }
-
+    // that did would keep the key held. Android finishes the old field before it starts
+    // the new one, so lifting here lifts the keys in the field that saw them go down.
+    //
+    // Not in onStartInput. That is also called, with restarting set, when the app
+    // changes the text of the field already in use, and a finger on Shift or on a held
+    // Backspace is then exactly where it should be; lifting there let go of Shift
+    // mid-word and stopped Backspace after one character in any field that rewrote
+    // its own text.
     override fun onFinishInput() {
         releaseEverything()
         super.onFinishInput()
