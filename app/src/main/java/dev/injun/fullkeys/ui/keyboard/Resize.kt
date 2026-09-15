@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,23 +47,6 @@ class Resize(
     val onDone: () -> Unit,
 )
 
-/** The lines drawn in the corner a floating keyboard is resized by. */
-internal fun DrawScope.drawCornerGrip(colour: Color) {
-    val inset = size.minDimension * 0.28f
-    val step = size.minDimension * 0.16f
-    val weight = size.minDimension * 0.05f
-    for (i in 1..2) {
-        val d = inset + step * i
-        drawLine(
-            colour,
-            Offset(size.width - d, size.height - inset),
-            Offset(size.width - inset, size.height - d),
-            strokeWidth = weight,
-            cap = StrokeCap.Round,
-        )
-    }
-}
-
 /** The mark that says a thing can be dragged. */
 @Composable
 private fun Grip(palette: KeyPalette) {
@@ -82,6 +66,8 @@ internal fun ResizeBar(
     sidePadding: Dp,
     height: Dp,
     modifier: Modifier = Modifier,
+    /** Dragging the handle in the middle of the bar changes the keyboard's height. */
+    handleModifier: Modifier = Modifier,
 ) {
     Box(
         modifier
@@ -90,10 +76,12 @@ internal fun ResizeBar(
             .padding(horizontal = sidePadding),
         contentAlignment = Alignment.Center,
     ) {
-        // The one handle that changes the height of a keyboard fixed to the bottom of the
-        // screen. A floating one is dragged about by anywhere on it and resized by its
-        // corner, so a handle would stand for nothing.
-        if (!floating) Grip(palette)
+        // The one handle that changes the height, docked or floating: the same mark in the
+        // same place means the same thing in both. Dragging a floating board anywhere else
+        // moves it. The mark is small, so the room it is dragged by is wider than it is.
+        Box(Modifier.width(HANDLE_HIT_WIDTH).fillMaxHeight().then(handleModifier), contentAlignment = Alignment.Center) {
+            Grip(palette)
+        }
         Row(
             Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(KEY_GAP),
@@ -165,11 +153,10 @@ private fun DrawScope.drawMark(mark: Mark, colour: Color, box: Float) {
 
 /** The mark drawn on the bar to say the keyboard is dragged by it. */
 private val HANDLE_WIDTH = 36.dp
+private val HANDLE_HIT_WIDTH = 96.dp
 private val HANDLE_HEIGHT = 4.dp
 
 /** How big a mark on the bar is inside its cap, and how thick its lines are. */
 private const val MARK_SCALE = 0.44f
 private const val MARK_WEIGHT = 0.055f
 
-/** The corner a floating keyboard is resized by, the way a window is. */
-internal val CORNER_HANDLE = 40.dp
