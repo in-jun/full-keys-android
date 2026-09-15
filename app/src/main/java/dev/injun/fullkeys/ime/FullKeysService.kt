@@ -262,6 +262,10 @@ class FullKeysService : InputMethodService(), LifecycleOwner, SavedStateRegistry
      * events do, so holding Backspace or an arrow works in an ordinary text field. An app
      * that repeats held keys itself ignores events that carry a repeat count, as it does
      * for a hardware keyboard, so the same events serve both.
+     *
+     * Each repeat carries the modifiers held at that moment, not the ones held at the
+     * press: a letter held with Shift and then without types capitals and then lower
+     * case, as it does on a hardware keyboard.
      */
     private fun repeat(pointer: Long, press: Stroke) {
         repeats.remove(pointer)?.cancel()
@@ -270,7 +274,8 @@ class FullKeysService : InputMethodService(), LifecycleOwner, SavedStateRegistry
             var count = 1
             while (true) {
                 val downTime = downTimes[press.key] ?: return@launch
-                currentInputConnection?.sendKeyEvent(keyEventOf(press, downTime, SystemClock.uptimeMillis(), count++))
+                val now = press.copy(modifiers = engine.heldModifiers())
+                currentInputConnection?.sendKeyEvent(keyEventOf(now, downTime, SystemClock.uptimeMillis(), count++))
                 delay(ViewConfiguration.getKeyRepeatDelay().toLong())
             }
         }

@@ -1,6 +1,7 @@
 package dev.injun.fullkeys.core.input
 
 import dev.injun.fullkeys.core.KeyId
+import dev.injun.fullkeys.core.KeyId.A
 import dev.injun.fullkeys.core.KeyId.ALT_RIGHT
 import dev.injun.fullkeys.core.KeyId.C
 import dev.injun.fullkeys.core.KeyId.CTRL_LEFT
@@ -152,5 +153,15 @@ class KeyboardEngineTest {
         assertEquals(C, strokes.first().key, "a key lifted after its modifiers arrives as a plain key")
         assertEquals(Latch.OFF, engine.fnLatch, "Fn stayed on for a keyboard that is no longer showing")
         assertEquals(emptyList<Stroke>(), engine.release(4), "a finger lifted after closing sent a second release")
+    }
+
+    @Test
+    fun `the modifiers held now are what a repeat should carry`() {
+        val engine = KeyboardEngine()
+        engine.press(1, SHIFT_LEFT)
+        engine.press(2, A)
+        assertEquals(setOf(SHIFT_LEFT), engine.heldModifiers(), "Shift is held while the letter is")
+        engine.release(1)
+        assertEquals(emptySet<KeyId>(), engine.heldModifiers(), "Shift lifted while the letter is still held")
     }
 }
