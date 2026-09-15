@@ -14,16 +14,17 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.tappableElement
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -337,13 +338,23 @@ fun KeyboardPanel(
                         fn = { fn },
                     )
                 }
-                // Drawn last so it lies over the caps: the corner a floating board is
-                // resized by, the way a window is.
-                if (floating && resize != null) {
+            }
+            // The corner a floating board is resized by, the way a window is. On a strip of
+            // its own under the keys, as tall as the bar above them, rather than drawn over
+            // the last key in the row, where it made that key look broken.
+            AnimatedVisibility(floating && resize != null, enter = expandVertically(), exit = shrinkVertically()) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(shownRowHeightDp.dp * SLIM_ROW_RATIO)
+                        .then(moveDrag),
+                ) {
                     Box(
                         Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(CORNER_HANDLE)
+                            .align(Alignment.CenterEnd)
+                            .padding(end = sidePadding)
+                            .fillMaxHeight()
+                            .aspectRatio(1f)
                             .then(resizeFromCorner)
                             .drawBehind { drawCornerGrip(palette.text) },
                     )
