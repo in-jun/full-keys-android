@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Full Keys</string>
+
+    <string name="section_keyboard">Keyboard</string>
+    <string name="setup_enable_action">Turn on in settings</string>
+    <string name="setup_enable_done">Turned on</string>
+    <string name="setup_select_action">Choose keyboard</string>
+    <string name="setup_select_done">In use</string>
+
+    <string name="layout_title">Layout</string>
+    <string name="layout_change">Change</string>
+    <string name="layout_follow_phone_current">Match phone language (%1$s)</string>
+    <string name="layout_search">Search</string>
+    <string name="layout_cancel">Cancel</string>
+
+    <string name="try_title">Try it</string>
+    <string name="try_body">Hold Fn on the keyboard to change its height, float it, or make its keys see-through.</string>
+    <string name="try_hint">Type here</string>
+
+    <string name="resize_float">Float</string>
+    <string name="resize_translucent">See-through</string>
+    <string name="resize_done">Done</string>
+    <string name="resize_move">Move</string>
+</resources>

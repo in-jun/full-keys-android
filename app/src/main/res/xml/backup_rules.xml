@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Auto Backup on Android 11 and below. Only the keyboard's settings are stored, and they
+    live in device-protected storage so the keyboard can read them before the phone is
+    first unlocked; nothing typed is ever written down.
+-->
+<full-backup-content>
+    <include domain="device_sharedpref" path="." />
+</full-backup-content>
