@@ -226,10 +226,9 @@ fun KeyboardPanel(
         val moveNow by rememberUpdatedState(onMove)
 
         // Both drags are measured on the screen, since what is dragged moves under the finger.
-        // The height a drag of an edge arrives at: [edge] is 1 for the top edge, which grows
-        // the keyboard as it goes up, and -1 for the bottom corner, which grows it going down.
-        fun heightAfter(startRow: Float, startRawY: Float, rawY: Float, edge: Float): Float =
-            (startRow + (startRawY - rawY) * edge / density.density / rows).coerceIn(shownRange)
+        // The height a drag of the top edge arrives at: up grows the keyboard, down shrinks it.
+        fun heightAfter(startRow: Float, startRawY: Float, rawY: Float): Float =
+            (startRow + (startRawY - rawY) / density.density / rows).coerceIn(shownRange)
 
         // Where a floating board stands after a drag, as a share of the room it has to move in.
         fun placeAfter(startAt: Offset, startRaw: Offset, raw: Offset): Offset {
@@ -243,10 +242,11 @@ fun KeyboardPanel(
             )
         }
 
-        fun resizeFrom(edge: Float): Modifier = if (resize == null) {
+        // Dragging the handle on the bar drags the top edge of the keyboard, floating or not.
+        val resizeDrag = if (resize == null) {
             Modifier
         } else {
-            Modifier.pointerInput(resize, shownRange, rows, density, edge) {
+            Modifier.pointerInput(resize, shownRange, rows, density) {
                 awaitEachGesture {
                     awaitFirstDown()
                     val startY = currentEvent.motionEvent?.rawY ?: return@awaitEachGesture
@@ -254,7 +254,7 @@ fun KeyboardPanel(
                     do {
                         val event = awaitPointerEvent()
                         event.motionEvent?.let { motion ->
-                            val rowHeight = heightAfter(start, startY, motion.rawY, edge)
+                            val rowHeight = heightAfter(start, startY, motion.rawY)
                             if (rowHeight != currentRowHeightDp) resize.onRowHeight(rowHeight)
                         }
                         event.changes.forEach { it.consume() }
@@ -262,8 +262,6 @@ fun KeyboardPanel(
                 }
             }
         }
-        val resizeDrag = resizeFrom(1f)
-        val resizeFromCorner = resizeFrom(-1f)
 
         // Dragging the bar of a floating keyboard carries the board with it.
         val moveDrag = if (resize == null || !floating) {
@@ -312,7 +310,7 @@ fun KeyboardPanel(
                                 val at = placeAfter(placeAtStart, from, raw)
                                 moveNow(at.x, at.y)
                             } else {
-                                val rowHeight = heightAfter(rowAtStart, from.y, raw.y, 1f)
+                                val rowHeight = heightAfter(rowAtStart, from.y, raw.y)
                                 if (rowHeight != currentRowHeightDp) resizing.onRowHeight(rowHeight)
                             }
                         } else {
@@ -362,6 +360,7 @@ fun KeyboardPanel(
                             // As tall as the function row, so the bar is a row of the keyboard.
                             height = shownRowHeightDp.dp * SLIM_ROW_RATIO,
                             modifier = if (floating) moveDrag else resizeDrag,
+                            handleModifier = resizeDrag,
                         )
                     }
                 }
@@ -383,17 +382,6 @@ fun KeyboardPanel(
                         palette = palette,
                         pressed = held.getValue(frame.key),
                         fn = { fn },
-                    )
-                }
-                // Drawn last so it lies over the caps: the corner a floating board is
-                // resized by, the way a window is.
-                if (floating && resize != null) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(CORNER_HANDLE)
-                            .then(resizeFromCorner)
-                            .drawBehind { drawCornerGrip(palette.text) },
                     )
                 }
             }
