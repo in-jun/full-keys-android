@@ -469,7 +469,6 @@ private enum class Mark(@StringRes val said: Int) {
     FLOAT(R.string.resize_float),
     SEE_THROUGH(R.string.resize_translucent),
     DONE(R.string.resize_done),
-    MOVE(R.string.resize_move),
 }
 
 /**
@@ -494,7 +493,7 @@ private fun BarButton(mark: Mark, palette: KeyPalette, height: Dp, on: Boolean =
 
 /**
  * The marks the bar is drawn with: a board lifted off the keyboard, a circle half seen
- * through, a tick, and the cross that says a thing can be dragged about.
+ * through, and a tick.
  */
 private fun DrawScope.drawMark(mark: Mark, colour: Color, box: Float) {
     val cx = size.width / 2
@@ -520,26 +519,6 @@ private fun DrawScope.drawMark(mark: Mark, colour: Color, box: Float) {
             colour,
             style = stroke,
         )
-        Mark.MOVE -> {
-            drawLine(colour, Offset(cx - r, cy), Offset(cx + r, cy), stroke.width, StrokeCap.Round)
-            drawLine(colour, Offset(cx, cy - r), Offset(cx, cy + r), stroke.width, StrokeCap.Round)
-            listOf(
-                Triple(Offset(cx - r, cy), Offset(cx - r * 0.5f, cy - r * 0.4f), Offset(cx - r * 0.5f, cy + r * 0.4f)),
-                Triple(Offset(cx + r, cy), Offset(cx + r * 0.5f, cy - r * 0.4f), Offset(cx + r * 0.5f, cy + r * 0.4f)),
-                Triple(Offset(cx, cy - r), Offset(cx - r * 0.4f, cy - r * 0.5f), Offset(cx + r * 0.4f, cy - r * 0.5f)),
-                Triple(Offset(cx, cy + r), Offset(cx - r * 0.4f, cy + r * 0.5f), Offset(cx + r * 0.4f, cy + r * 0.5f)),
-            ).forEach { (tip, a, b) ->
-                drawPath(
-                    Path().apply {
-                        moveTo(tip.x, tip.y)
-                        lineTo(a.x, a.y)
-                        lineTo(b.x, b.y)
-                        close()
-                    },
-                    colour,
-                )
-            }
-        }
     }
 }
 
@@ -994,8 +973,7 @@ private val FLOAT_RADIUS = 16.dp
 private val FLOAT_MARGIN = 6.dp
 private val FLOAT_ELEVATION = 8.dp
 
-/** The strip a floating keyboard is dragged by, and the mark drawn in the middle of it. */
-private val HANDLE_ROW_HEIGHT = 18.dp
+/** The mark drawn on the bar to say the keyboard is dragged by it. */
 private val HANDLE_WIDTH = 36.dp
 private val HANDLE_HEIGHT = 4.dp
 
