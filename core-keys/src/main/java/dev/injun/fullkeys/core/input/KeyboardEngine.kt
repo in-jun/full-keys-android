@@ -60,6 +60,13 @@ class KeyboardEngine {
     /** True while [key] is held down. */
     fun isDown(key: KeyId): Boolean = key in down
 
+    /**
+     * The modifiers held down at this moment. A stroke carries the modifiers held when it
+     * was made; anything sent later on behalf of a key still held, such as a repeat,
+     * should carry these instead, because the finger on Shift may have lifted since.
+     */
+    fun heldModifiers(): Set<KeyId> = modifiers()
+
     fun press(pointer: Long, key: KeyId): List<Stroke> {
         if (pointer in presses) return emptyList()
         presses.values.forEach { it.usedAsHold = true }
