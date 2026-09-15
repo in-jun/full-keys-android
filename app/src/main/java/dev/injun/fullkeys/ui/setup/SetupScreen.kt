@@ -119,18 +119,23 @@ fun SetupScreen(
                 .padding(horizontal = SCREEN_PADDING),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            // Only what is left to do. A finished step said so in large primary-coloured
+            // text, which read as something to tap; once both are done there is nothing
+            // to tap, and one quiet line says so.
             Section(stringResource(R.string.section_keyboard)) {
-                Step(
-                    action = stringResource(R.string.setup_enable_action),
-                    done = stringResource(R.string.setup_enable_done).takeIf { status.enabled },
-                    onAction = onOpenKeyboardList,
-                )
-                Step(
-                    action = stringResource(R.string.setup_select_action),
-                    done = stringResource(R.string.setup_select_done).takeIf { status.selected },
-                    onAction = onChooseKeyboard,
-                    enabled = status.enabled,
-                )
+                when {
+                    !status.enabled -> Button(onClick = onOpenKeyboardList, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.setup_enable_action))
+                    }
+                    !status.selected -> Button(onClick = onChooseKeyboard, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.setup_select_action))
+                    }
+                    else -> Text(
+                        stringResource(R.string.setup_ready),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             Section(stringResource(R.string.layout_title)) {
@@ -188,20 +193,6 @@ private fun Section(title: String, content: @Composable () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         content()
-    }
-}
-
-/** A step of the setup: the button to take it, or a note that it is done. */
-@Composable
-private fun Step(action: String, done: String?, onAction: () -> Unit, enabled: Boolean = true) {
-    if (done != null) {
-        Text(
-            "✓ $done",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    } else {
-        Button(onClick = onAction, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(action) }
     }
 }
 
