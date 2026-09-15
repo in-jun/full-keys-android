@@ -30,9 +30,9 @@ internal data class KeyPalette(
     companion object {
         val Opaque = KeyPalette(
             ground = Color(0xFF15171C),
-            character = Color(0xFF2D3039),
-            modifier = Color(0xFF22252C),
-            function = Color(0xFF1F2128),
+            character = Color(0xFF353947),
+            modifier = Color(0xFF23262E),
+            function = Color(0xFF1A1C22),
             pressed = Color(0xFF4A5060),
             accent = Color(0xFF3D59A1),
             accentDim = Color(0xFF2C3A5E),
@@ -45,9 +45,9 @@ internal data class KeyPalette(
 
         val Translucent = KeyPalette(
             ground = Color(0x4D0C0D11),
-            character = Color(0x21FFFFFF),
-            modifier = Color(0x1AFFFFFF),
-            function = Color(0x14FFFFFF),
+            character = Color(0x2CFFFFFF),
+            modifier = Color(0x18FFFFFF),
+            function = Color(0x0CFFFFFF),
             pressed = Color(0x66FFFFFF),
             accent = Color(0x997AA2F7),
             accentDim = Color(0x557AA2F7),
