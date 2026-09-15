@@ -146,10 +146,8 @@ fun SetupScreen(
                     layout = layout,
                     settings = settings,
                     fn = FnState(),
-                    onPress = { _, _ -> },
-                    onRelease = {},
                     modifier = Modifier.bleed(SCREEN_PADDING),
-                    clearSystemBars = false,
+                    preview = true,
                 )
             }
 

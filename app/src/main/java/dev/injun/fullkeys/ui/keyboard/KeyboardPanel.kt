@@ -78,8 +78,9 @@ import kotlin.math.roundToInt
  * shortcut is two fingers on two caps at once; per-cap gesture handling is built for
  * taps and would cancel one when the other starts.
  *
- * [clearSystemBars] pads the keyboard clear of the navigation bar and cutouts, which only
- * the input method's own window needs; a preview inside a screen leaves it off.
+ * A [preview] is a picture of the keyboard inside a screen rather than the keyboard itself:
+ * it is not padded clear of the navigation bar, it does not float, and it takes no touches,
+ * so a finger on it scrolls the screen it is in rather than pressing keys that go nowhere.
  *
  * With [resize] set the keyboard is being resized rather than typed on; see [Resize].
  *
@@ -92,10 +93,10 @@ fun KeyboardPanel(
     layout: KeyboardLayout,
     settings: KeyboardSettings,
     fn: FnState,
-    onPress: (pointer: Long, key: KeyCap) -> Unit,
-    onRelease: (pointer: Long) -> Unit,
     modifier: Modifier = Modifier,
-    clearSystemBars: Boolean = true,
+    onPress: (pointer: Long, key: KeyCap) -> Unit = { _, _ -> },
+    onRelease: (pointer: Long) -> Unit = {},
+    preview: Boolean = false,
     resize: Resize? = null,
     /** Where a floating keyboard has been dragged, as a share of the room it has to move in. */
     onMove: (x: Float, y: Float) -> Unit = { _, _ -> },
@@ -130,9 +131,8 @@ fun KeyboardPanel(
         if (resizing) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
     }
 
-    // A preview inside a screen is a picture of the keyboard, so it stays where it is put.
-    val floating = settings.floating && clearSystemBars
-    val insets = if (clearSystemBars) keyboardInsets() else PaddingValues()
+    val floating = settings.floating && !preview
+    val insets = if (preview) PaddingValues() else keyboardInsets()
 
     // The floating board is placed inside the whole screen; a docked one fills the width it
     // is given, and the caller's modifier belongs to the board either way.
@@ -295,10 +295,10 @@ fun KeyboardPanel(
                 }
             }
             Box(
-                if (resize != null) {
-                    keysArea.alpha(RESTING_KEYS_ALPHA)
-                } else {
-                    keysArea.pointerInput(geometry, held) {
+                when {
+                    resize != null -> keysArea.alpha(RESTING_KEYS_ALPHA)
+                    preview -> keysArea
+                    else -> keysArea.pointerInput(geometry, held) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
