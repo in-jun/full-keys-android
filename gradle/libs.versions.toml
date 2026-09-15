@@ -9,7 +9,7 @@ coroutines = "1.11.0"
 androidxCore = "1.19.0"
 androidxActivity = "1.13.0"
 androidxLifecycle = "2.11.0"
-androidxComposeBom = "2026.08.00"
+androidxComposeBom = "2026.09.00"
 androidxHilt = "1.4.0"
 
 # DI
