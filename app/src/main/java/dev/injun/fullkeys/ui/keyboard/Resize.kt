@@ -79,25 +79,24 @@ internal fun ResizeBar(
     height: Dp,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Row(
         modifier
             .fillMaxWidth()
             .height(height)
             .padding(horizontal = sidePadding),
-        contentAlignment = Alignment.Center,
+        horizontalArrangement = Arrangement.spacedBy(KEY_GAP),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // The one handle that changes the height of a keyboard fixed to the bottom of the
-        // screen. A floating one is dragged about by anywhere on it and resized by its
-        // corner, so a handle would stand for nothing.
-        if (!floating) Grip(palette)
-        Row(
-            Modifier.align(Alignment.CenterEnd),
-            horizontalArrangement = Arrangement.spacedBy(KEY_GAP),
-        ) {
-            BarButton(stringResource(R.string.resize_float), palette, height, on = floating) { resize.onFloating(!floating) }
-            BarButton(stringResource(R.string.resize_translucent), palette, height, on = translucent) { resize.onTranslucent(!translucent) }
-            BarButton(stringResource(R.string.resize_done), palette, height, onClick = resize.onDone)
+        // screen, in the middle of the room the buttons leave it. A floating one is dragged
+        // about by anywhere on it and resized by its corner, so a handle would stand for
+        // nothing.
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            if (!floating) Grip(palette)
         }
+        BarButton(stringResource(R.string.resize_float), palette, height, on = floating) { resize.onFloating(!floating) }
+        BarButton(stringResource(R.string.resize_translucent), palette, height, on = translucent) { resize.onTranslucent(!translucent) }
+        BarButton(stringResource(R.string.resize_done), palette, height, onClick = resize.onDone)
     }
 }
 
