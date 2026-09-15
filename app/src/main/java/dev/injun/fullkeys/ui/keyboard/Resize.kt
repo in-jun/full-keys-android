@@ -132,5 +132,3 @@ private val HANDLE_HEIGHT = 4.dp
 private val BAR_LABEL_PADDING = 10.dp
 private val BAR_LABEL_SIZE = 11.sp
 
-/** The corner a floating keyboard is resized by, the way a window is. */
-internal val CORNER_HANDLE = 40.dp
