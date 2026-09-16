@@ -157,11 +157,13 @@ fun KeyboardPanel(
         val board = if (!floating) {
             modifier
                 .fillMaxWidth()
-                // The keyboard's own surface stops where its keys do. The strip the system
-                // keeps for itself below is left to whatever is behind, so the keyboard
-                // does not put a band of its own colour under the last row.
-                .padding(bottom = insets.calculateBottomPadding())
+                // The ground runs under the strip the system keeps for itself at the bottom,
+                // with only the keys held above it. Stopping the ground at the last row left
+                // that strip showing the app underneath, a band of somebody else's colour
+                // between the keys and the edge of the screen, which is not what any other
+                // keyboard on the phone does.
                 .background(palette.ground)
+                .padding(bottom = insets.calculateBottomPadding())
                 .padding(
                     start = insets.calculateStartPadding(LayoutDirection.Ltr),
                     end = insets.calculateEndPadding(LayoutDirection.Ltr),
